@@ -13,6 +13,7 @@ class Block:
         self.timestamp = timestamp
         self.previous_hash = previous_hash
         self.nonce = nonce
+        
 
     def compute_hash(self):
         """
@@ -21,12 +22,11 @@ class Block:
         block_string = json.dumps(self.__dict__, sort_keys=True)
         return sha256(block_string.encode()).hexdigest()
 
-new_block = Block(0, [], 0, "0")
-print()
 
 class Blockchain:
     # difficulty of our PoW algorithm
-    difficulty = 2
+    difficulty = 5
+    maxTxnInBlock = 10
 
     def __init__(self):
         self.unconfirmed_transactions = []
@@ -83,6 +83,8 @@ class Blockchain:
 
     def add_new_transaction(self, transaction):
         self.unconfirmed_transactions.append(transaction)
+        if len(self.unconfirmed_transactions)%self.maxTxnInBlock==0: #mine the block if it contains more than 5 transactions
+            mine_unconfirmed_transactions()
 
     @classmethod
     def is_valid_proof(cls, block, block_hash):
@@ -152,7 +154,7 @@ peers = set()
 @app.route('/new_transaction', methods=['POST'])
 def new_transaction():
     tx_data = request.get_json()
-    required_fields = ["author", "content"]
+    required_fields = ["Customer", "Amount", "Drink"]
 
     for field in required_fields:
         if not tx_data.get(field):
