@@ -5,6 +5,8 @@ import time
 from flask import Flask, request
 import requests
 
+def compute_Sha256(input):
+    return sha256(input).hexdigest()
 
 class Block:
     def __init__(self, index, transactions, timestamp, previous_hash, nonce=0):
@@ -13,15 +15,13 @@ class Block:
         self.timestamp = timestamp
         self.previous_hash = previous_hash
         self.nonce = nonce
+        leafhash = []
+        for txn in transactions:
+            leafhash.append(compute_Sha256(txn))
+        self.leafhash = leafhash
 
-    def compute_hash(self):
-        """
-        A function that return the hash of the block contents.
-        """
-        block_string = json.dumps(self.__dict__, sort_keys=True)
-        # for elements in self.__dict__:
-        print(block_string)
-        # return sha256(block_string.encode()).hexdigest()
+    def compute_merkle_root(self):#calculate the merkle root of the transactions
+        print(self.leafhash)
 
-newbclk =  Block(0, [], 0, "0")
-print(newbclk.compute_hash())
+newbclk =  Block(0, [{"author":"neil","price":"50"},{"author":"neil121","price":"5540"}], 0, "0")
+print(newbclk.compute_merkle_root())

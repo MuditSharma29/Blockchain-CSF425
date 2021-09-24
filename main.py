@@ -5,6 +5,11 @@ import time
 from flask import Flask, request
 import requests
 
+# from Crypto.PublicKey import RSA
+# from Crypto.Signature.pkcs1_15 import PKCS115_SigScheme
+# from Crypto.Hash import SHA256
+# import binascii
+
 
 class Block:
     def __init__(self, index, transactions, timestamp, previous_hash, nonce=0):
@@ -13,7 +18,22 @@ class Block:
         self.timestamp = timestamp
         self.previous_hash = previous_hash
         self.nonce = nonce
-        
+
+    def compute_Sha256(input):
+        return sha256(input).hexdigest()
+    
+    def clone_transactions_for_leafhash(self):
+        leafhash=[]
+        for txn in self.transactions:
+            print(txn)
+            leafhash.append(compute_Sha256(txn))
+        return hashleaf
+
+    def compute_merkle_root(self):#calculate the merkle root of the transactions
+        leafhash = clone_transactions_for_leafhash(self)
+        if len(self.transactions)%2==0:
+
+
 
     def compute_hash(self):
         """
@@ -22,6 +42,14 @@ class Block:
         block_string = json.dumps(self.__dict__, sort_keys=True)
         return sha256(block_string.encode()).hexdigest()
 
+
+#{
+    # transaction:[]
+    #index:5454
+    #ts:asfdsafd
+    # ph:asfdasfd
+    #merkle_hash:sha256(txn)
+# }
 
 class Blockchain:
     # difficulty of our PoW algorithm
@@ -39,6 +67,7 @@ class Blockchain:
         a valid hash.
         """
         genesis_block = Block(0, [], 0, "0")
+        genesis_block.merkle_hash = genesis_block.compute_merkle_root()
         genesis_block.hash = genesis_block.compute_hash()
         self.chain.append(genesis_block)
 
@@ -326,6 +355,39 @@ def announce_new_block(block):
         requests.post(url,
                       data=json.dumps(block.__dict__, sort_keys=True),
                       headers=headers)
+
+# # Digital signatures implementation
+
+# # Generate 1024-bit RSA key pair (private + public key)
+# keyPair = RSA.generate(bits=1024)
+# pubKey = keyPair.publickey()
+
+# # Sign the message using the PKCS#1 v1.5 signature scheme (RSASP1)
+# msg = b'Message for RSA signing'
+# hash = SHA256.new(msg)
+# signer = PKCS115_SigScheme(keyPair)
+# signature = signer.sign(hash)
+# print("Signature:", binascii.hexlify(signature))
+
+# # Verify valid PKCS#1 v1.5 signature (RSAVP1)
+# msg = b'Message for RSA signing'
+# hash = SHA256.new(msg)
+# verifier = PKCS115_SigScheme(pubKey)
+# try:
+#     verifier.verify(hash, signature)
+#     print("Signature is valid.")
+# except:
+#     print("Signature is invalid.")
+
+# # Verify invalid PKCS#1 v1.5 signature (RSAVP1)
+# msg = b'A tampered message'
+# hash = SHA256.new(msg)
+# verifier = PKCS115_SigScheme(pubKey)
+# try:
+#     verifier.verify(hash, signature)
+#     print("Signature is valid.")
+# except:
+#     print("Signature is invalid.")
 
 # Uncomment this line if you want to specify the port number in the code
 app.run(debug=True, port=8000)
