@@ -107,7 +107,7 @@ You are all set to view the blockchain and use it.
   - Immutability of the Blockchain (No one can change the already committed information)  
   - The timestamp of each Transaction is readily available using both the chain endpoint and time endpoint
   - All the completed transactions are stored in the blockchain, we have both a verified (mined) pool as well as pending(uncomfirmed) transactions.
-  - We have also implemented a basic Proof of Work Algorithm where the hash of the block has to start with x numbers of 0's. We can set the difficulty (x) using the difficulty parameter in the BlockChain class. We took reference from the following code for the same implementation [*code*](https://gist.github.com/satwikkansal/4a857cad2797b9d199547a752933a715)
+  - We have also implemented a basic Proof of Work Algorithm where the hash of the block has to start with x numbers of 0's. We can set the difficulty (x) using the difficulty parameter in the BlockChain class. We took reference from the following code for the same implementation [*code*](https://gist.github.com/satwikkansal/4a857cad2797b9d199547a752933a715#4-implement-a-proof-of-work-algorithm)
   - The value of each nonce is calculated using the Proof of Work algorithm
   - Each Block may contain multiple transactions, it can also contain a single transaction
   - Each Block can have a maximum of 10 transactions after which it will automatically mine the block from the unconfirmed transactions pool.
