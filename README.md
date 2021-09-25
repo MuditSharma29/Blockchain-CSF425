@@ -14,13 +14,19 @@ Run the following command to get the Flask API started to get the endpoints to t
 You are all set to view the blockchain and use it.
 The endpoints and therir functionalities are listed below :
 GET endpoints=>
-                
+/chain: displays info about the whole chain
+/mine:  to add all the left transactions to the block and add it to the block
+/time:  to display the time of each transaction
                                 
                 
 
 
 
 POST endpoints=>
+/new_transaction: to add a new transaction to the pool
+/add_block:       to add a whole new block to the blockchain (multiple transactions in a block)
+/register_node:   to register a node to the network
+/register_with:   to register and sync a new node to the network
                 
 
                 
