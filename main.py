@@ -20,20 +20,33 @@ class Block:
         self.previous_hash = previous_hash
         self.nonce = nonce
 
-    def compute_Sha256(input):
-        return sha256(input).hexdigest()
-    
-    def clone_transactions_for_leafhash(self):
-        leafhash=[]
-        for txn in self.transactions:
-            print(txn)
-            leafhash.append(compute_Sha256(txn))
-        return hashleaf
+    #    def clone_transactions_for_leafhash(self):
+    #     leafhash=[]
+    #     for txn in self.transactions:
+    #         print(txn)
+    #         txn_string = json.dumps(txn, sort_keys=True)
+    #         leafhash.append(compute_Sha256(txn_string.encode()))
+    #         # print(leafhash)
+    #     return leafhash
 
-    def compute_merkle_root(self):#calculate the merkle root of the transactions
-        leafhash = clone_transactions_for_leafhash(self)
-        if len(self.transactions)%2==0:
-            pass
+    # def compute_merkle_root(self):#calculate the merkle root of the transactions
+    #     print("new recurssion")
+    #     if len(self.leafhash)!=1:
+    #         if len(self.leafhash)%2==0:
+    #             j=0
+    #             for i in range(0,len(self.leafhash)-1,2):
+    #                 hash_string = json.dumps(self.leafhash[i]+self.leafhash[i+1], sort_keys=True)
+    #                 self.leafhash[j] = compute_Sha256(hash_string.encode())
+    #                 i+=1
+    #                 j+=1
+    #                 print("i = ",i," j = ",j)
+    #             print("self.leafhash = ",self.leafhash)
+    #             self.compute_merkle_root()
+    #         else:
+    #             self.leafhash.append(self.leafhash[len(self.leafhash)-1])
+    #             self.compute_merkle_root()
+    #     else:
+    #         return self.leafhash[0]
         
 
     def compute_hash(self):
@@ -371,6 +384,9 @@ def announce_new_block(block):
                       data=json.dumps(block.__dict__, sort_keys=True),
                       headers=headers)
 
+
+
+
 # # Digital signatures implementation
 
 # # Generate 1024-bit RSA key pair (private + public key)
@@ -403,6 +419,9 @@ def announce_new_block(block):
 #     print("Signature is valid.")
 # except:
 #     print("Signature is invalid.")
+
+
+
 
 # Uncomment this line if you want to specify the port number in the code
 app.run(debug=True, port=8000)
