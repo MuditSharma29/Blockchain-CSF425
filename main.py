@@ -4,6 +4,7 @@ import time
 
 from flask import Flask, request
 import requests
+from getmac import get_mac_address as gma
 
 # from Crypto.PublicKey import RSA
 # from Crypto.Signature.pkcs1_15 import PKCS115_SigScheme
@@ -32,8 +33,8 @@ class Block:
     def compute_merkle_root(self):#calculate the merkle root of the transactions
         leafhash = clone_transactions_for_leafhash(self)
         if len(self.transactions)%2==0:
-
-
+            pass
+        
 
     def compute_hash(self):
         """
@@ -53,7 +54,7 @@ class Block:
 
 class Blockchain:
     # difficulty of our PoW algorithm
-    difficulty = 5
+    difficulty = 2
     maxTxnInBlock = 10
 
     def __init__(self):
@@ -67,7 +68,7 @@ class Blockchain:
         a valid hash.
         """
         genesis_block = Block(0, [], 0, "0")
-        genesis_block.merkle_hash = genesis_block.compute_merkle_root()
+        # genesis_block.merkle_hash = genesis_block.compute_merkle_root()
         genesis_block.hash = genesis_block.compute_hash()
         self.chain.append(genesis_block)
 
@@ -112,7 +113,7 @@ class Blockchain:
 
     def add_new_transaction(self, transaction):
         self.unconfirmed_transactions.append(transaction)
-        if len(self.unconfirmed_transactions)%self.maxTxnInBlock==0: #mine the block if it contains more than 5 transactions
+        if len(self.unconfirmed_transactions)%self.maxTxnInBlock==0: #mine the block if it contains more than 10 transactions
             mine_unconfirmed_transactions()
 
     @classmethod
@@ -157,7 +158,7 @@ class Blockchain:
 
         new_block = Block(index=last_block.index + 1,
                           transactions=self.unconfirmed_transactions,
-                          timestamp=time.time(),
+                          timestamp=time.ctime(),
                           previous_hash=last_block.hash)
 
         proof = self.proof_of_work(new_block)
@@ -177,9 +178,18 @@ blockchain.create_genesis_block()
 # the address to other participating members of the network
 peers = set()
 
+@app.route('/time', methods=['GET'])
+def gettimeofTxn():
+    chain_data = []
+    timestamp_arr=[]
+    for block in blockchain.chain:
+        chain_data.append(block.__dict__)
+    for item in chain_data:
+        timestamp_arr.append(item["timestamp"])
+    jsonString = json.dumps(timestamp_arr)
+    return jsonString
 
-# endpoint to submit a new transaction. This will be used by
-# our application to add new data (posts) to the blockchain
+
 @app.route('/new_transaction', methods=['POST'])
 def new_transaction():
     tx_data = request.get_json()
@@ -189,7 +199,7 @@ def new_transaction():
         if not tx_data.get(field):
             return "Invalid transaction data", 404
 
-    tx_data["timestamp"] = time.time()
+    tx_data["timestamp"] = time.ctime()
 
     blockchain.add_new_transaction(tx_data)
 
@@ -312,6 +322,11 @@ def verify_and_add_block():
     return "Block added to the chain", 201
 
 
+@app.route('/getmac')
+#endpoint to get the macaddress of a node
+def getmacadd():
+    return gma()
+
 # endpoint to query unconfirmed transactions
 @app.route('/pending_tx')
 def get_pending_tx():
@@ -320,7 +335,7 @@ def get_pending_tx():
 
 def consensus():
     """
-    Our naive consnsus algorithm. If a longer valid chain is
+    Our naive consensus algorithm. If a longer valid chain is
     found, our chain is replaced with it.
     """
     global blockchain
