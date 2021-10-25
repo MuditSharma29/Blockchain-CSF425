@@ -144,7 +144,7 @@ class Blockchain:
 
         return result
 
-    def mine(self):
+    def seal(self):
         """
         This function serves as an interface to add the pending
         transactions to the blockchain by adding them to the block
@@ -219,23 +219,23 @@ def get_chain():
                        "peers": list(peers)})
 
 
-# endpoint to request the node to mine the unconfirmed
+# endpoint to request the node to seal the unconfirmed
 # transactions (if any). We'll be using it to initiate
-# a command to mine from our application itself.
-@app.route('/mine', methods=['GET'])
-def mine_unconfirmed_transactions():
-    result = blockchain.mine()
+# a command to seal from our application itself.
+@app.route('/seal', methods=['GET'])
+def seal_unconfirmed_transactions():
+    result = blockchain.seal()
     if not result:
-        return "No transactions to mine"
+        return "No transactions to seal"
     else:
         chain_length = len(blockchain.chain)
         consensus()
         if chain_length == len(blockchain.chain):
             print("chain length is =",chain_length)
-            # announce the recently mined block to the network
+            # announce the recently seald block to the network
             print("blockchain.last_block = ",blockchain.last_block.transactions)
             announce_new_block(blockchain.last_block)
-        return "Block #{} is mined.".format(blockchain.last_block.index)
+        return "Block #{} is seald.".format(blockchain.last_block.index)
 
 
 # endpoint to add new peers to the network.
@@ -312,7 +312,7 @@ def create_chain_from_dump(chain_dump):
     return generated_blockchain
 
 
-# endpoint to add a block mined by someone else to
+# endpoint to add a block seald by someone else to
 # the node's chain. The block is first verified by the node
 # and then added to the chain.
 @app.route('/add_block', methods=['POST'])
@@ -385,7 +385,7 @@ def consensus():
 
 def announce_new_block(block):
     """
-    A function to announce to the network once a block has been mined.
+    A function to announce to the network once a block has been seald.
     Other blocks can simply verify the proof of work and add it to their
     respective chains.
     """

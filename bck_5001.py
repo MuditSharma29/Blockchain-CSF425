@@ -5,7 +5,7 @@ from uuid import uuid4
 from urllib.parse import urlparse
 from flask import Flask, request, jsonify
 import requests
-from authority_nodes import authority_nodes
+from authority_nodes import authority_nodes_list
 from cryptography.hazmat.primitives import serialization as crypto_serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend as crypto_default_backend
@@ -33,7 +33,7 @@ class Block:
         self.timestamp = timestamp
         self.previous_hash = previous_hash
         self.nonce = nonce
-        self.signer = signer
+        self.signer = signer                                #stores the sign of the node
 
     def compute_hash(self):
         """
@@ -98,23 +98,22 @@ class Blockchain:
 
     @staticmethod
     def proof_of_authority(block):
-        signer_count = len(authority_nodes)
+        signer_count = len(authority_nodes_list)                     #number of Nodes which are allowed to sign a block
         block_number = block.index
-        signer_index = block_number%signer_count
-        block.signer = authority_nodes[signer_index]
-        signer_key = compute_shaHash(str(signer_index))
+        signer_index = block_number%signer_count                #this is the index of the Signer which will sign THIS block
+        block.signer = authority_nodes_list[signer_index]
+        signer_key = compute_shaHash(str(signer_index))         #hash of the signer
         signed_data = block.compute_hash() + str(signer_key)
         signed_hash = compute_shaHash(signed_data)
-        block.hash = signed_hash
-        #self port hash added to the computed _hash gives the signed hash of the block.
-        return signed_hash
+        block.hash = signed_hash                                #self port hash added to the computed _hash gives the signed hash of the block.
+        return signed_hash                                      #returns the signed hash of this block
 
     def add_new_transaction(self, transaction):
-        self.unconfirmed_transactions.append(transaction)
+        self.unconfirmed_transactions.append(transaction)       #adds transaction to the unconfirmed pool
     
     def add_node(self, address):
         parsed_url = urlparse(address)
-        self.nodes.add(parsed_url.netloc)
+        self.peers.add(parsed_url.netloc)                   #adds a Node address to the current pool of nodes
 
     @classmethod
     def is_valid_proof(cls, block, block_hash):
@@ -144,7 +143,7 @@ class Blockchain:
 
         return result
 
-    def mine(self):
+    def seal(self):
         """
         This function serves as an interface to add the pending
         transactions to the blockchain by adding them to the block
@@ -219,23 +218,23 @@ def get_chain():
                        "peers": list(peers)})
 
 
-# endpoint to request the node to mine the unconfirmed
+# endpoint to request the node to seal the unconfirmed
 # transactions (if any). We'll be using it to initiate
-# a command to mine from our application itself.
-@app.route('/mine', methods=['GET'])
-def mine_unconfirmed_transactions():
-    result = blockchain.mine()
+# a command to seal from our application itself.
+@app.route('/seal', methods=['GET'])
+def seal_unconfirmed_transactions():
+    result = blockchain.seal()
     if not result:
-        return "No transactions to mine"
+        return "No transactions to seal"
     else:
         chain_length = len(blockchain.chain)
         consensus()
         if chain_length == len(blockchain.chain):
             print("chain length is =",chain_length)
-            # announce the recently mined block to the network
+            # announce the recently seald block to the network
             print("blockchain.last_block = ",blockchain.last_block.transactions)
             announce_new_block(blockchain.last_block)
-        return "Block #{} is mined.".format(blockchain.last_block.index)
+        return "Block #{} is sealed.".format(blockchain.last_block.index)
 
 
 # endpoint to add new peers to the network.
@@ -312,7 +311,7 @@ def create_chain_from_dump(chain_dump):
     return generated_blockchain
 
 
-# endpoint to add a block mined by someone else to
+# endpoint to add a block seald by someone else to
 # the node's chain. The block is first verified by the node
 # and then added to the chain.
 @app.route('/add_block', methods=['POST'])
@@ -385,7 +384,7 @@ def consensus():
 
 def announce_new_block(block):
     """
-    A function to announce to the network once a block has been mined.
+    A function to announce to the network once a block has been seald.
     Other blocks can simply verify the proof of work and add it to their
     respective chains.
     """
