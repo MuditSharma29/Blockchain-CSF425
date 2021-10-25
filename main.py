@@ -5,11 +5,12 @@ from uuid import uuid4
 from urllib.parse import urlparse
 from flask import Flask, request, jsonify
 import requests
-from authority_nodes import authority_nodes
+import authority_nodes 
 from cryptography.hazmat.primitives import serialization as crypto_serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend as crypto_default_backend
 
+authority_nodes_list = authority_nodes.authority_nodes_list
 
 key = rsa.generate_private_key(
     backend=crypto_default_backend(),
@@ -53,7 +54,6 @@ class Block:
 
 class Blockchain:
     #PoA algorithm implemented
-
     def __init__(self):
         self.unconfirmed_transactions = []
         self.chain = []
@@ -98,10 +98,10 @@ class Blockchain:
 
     @staticmethod
     def proof_of_authority(block):
-        signer_count = len(authority_nodes)
+        signer_count = len(authority_nodes_list)
         block_number = block.index
         signer_index = block_number%signer_count
-        block.signer = authority_nodes[signer_index]
+        block.signer = authority_nodes_list[signer_index]
         signer_key = compute_shaHash(str(signer_index))
         signed_data = block.compute_hash() + str(signer_key)
         signed_hash = compute_shaHash(signed_data)
