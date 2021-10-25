@@ -1,4 +1,5 @@
-from authority_nodes import authority_nodes
+from authority_nodes import authority_nodes_list,add_authority,remove_authority
+import math
 voting_lst = []
  
 # Authority to be voted for as input
@@ -12,12 +13,8 @@ for i in range(0, n):
 remove_votes = voting_lst.count(0)
 add_votes = n - remove_votes
 majority = math.floor(float(len(authority_nodes_list)/2)) + 1
+if remove_votes > majority :
+		remove_authority(authority_id_voting)	
+elif add_votes > majority :
+		add_authority(authority_id_voting)
 
-for i in range(0,n):
-	if authority_id_voting == (i in authority_nodes_list):
-		bool id = True
-if id == True:
-	if remove_votes > majority :
-		remove_authority(authority_id)	
-	elif add_votes > majority :
-		add_authority(authority_id)
