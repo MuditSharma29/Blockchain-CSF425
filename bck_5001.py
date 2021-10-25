@@ -3,53 +3,37 @@ import json
 import time
 from uuid import uuid4
 from urllib.parse import urlparse
-
 from flask import Flask, request, jsonify
 import requests
-from getmac import get_mac_address as gma
+from authority_nodes import authority_nodes
+from cryptography.hazmat.primitives import serialization as crypto_serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.backends import default_backend as crypto_default_backend
 
-# from Crypto.PublicKey import RSA
-# from Crypto.Signature.pkcs1_15 import PKCS115_SigScheme
-# from Crypto.Hash import SHA256
-# import binascii
 
+key = rsa.generate_private_key(
+    backend=crypto_default_backend(),
+    public_exponent=65537,
+    key_size=2048
+)
+
+private_key = key.private_bytes(
+    crypto_serialization.Encoding.PEM,
+    crypto_serialization.PrivateFormat.PKCS8,
+    crypto_serialization.NoEncryption()
+)
+
+def compute_shaHash(text):
+    return sha256(text.encode()).hexdigest()
 
 class Block:
-    def __init__(self, index, transactions, timestamp, previous_hash, nonce=0):
+    def __init__(self, index, transactions, timestamp, previous_hash, nonce=0,signer=-1):
         self.index = index
         self.transactions = transactions
         self.timestamp = timestamp
         self.previous_hash = previous_hash
         self.nonce = nonce
-
-    #    def clone_transactions_for_leafhash(self):
-    #     leafhash=[]
-    #     for txn in self.transactions:
-    #         print(txn)
-    #         txn_string = json.dumps(txn, sort_keys=True)
-    #         leafhash.append(compute_Sha256(txn_string.encode()))
-    #         # print(leafhash)
-    #     return leafhash
-
-    # def compute_merkle_root(self):#calculate the merkle root of the transactions
-    #     print("new recurssion")
-    #     if len(self.leafhash)!=1:
-    #         if len(self.leafhash)%2==0:
-    #             j=0
-    #             for i in range(0,len(self.leafhash)-1,2):
-    #                 hash_string = json.dumps(self.leafhash[i]+self.leafhash[i+1], sort_keys=True)
-    #                 self.leafhash[j] = compute_Sha256(hash_string.encode())
-    #                 i+=1
-    #                 j+=1
-    #                 print("i = ",i," j = ",j)
-    #             print("self.leafhash = ",self.leafhash)
-    #             self.compute_merkle_root()
-    #         else:
-    #             self.leafhash.append(self.leafhash[len(self.leafhash)-1])
-    #             self.compute_merkle_root()
-    #     else:
-    #         return self.leafhash[0]
-        
+        self.signer = signer
 
     def compute_hash(self):
         """
@@ -68,13 +52,12 @@ class Block:
 # }
 
 class Blockchain:
-    # difficulty of our PoW algorithm
-    difficulty = 2
-    maxTxnInBlock = 10
+    #PoA algorithm implemented
 
     def __init__(self):
         self.unconfirmed_transactions = []
         self.chain = []
+
 
     def create_genesis_block(self):
         """
@@ -83,7 +66,6 @@ class Blockchain:
         a valid hash.
         """
         genesis_block = Block(0, [], 0, "0")
-        # genesis_block.merkle_hash = genesis_block.compute_merkle_root()
         genesis_block.hash = genesis_block.compute_hash()
         self.chain.append(genesis_block)
 
@@ -102,47 +84,45 @@ class Blockchain:
         previous_hash = self.last_block.hash
 
         if previous_hash != block.previous_hash:
+            print("previous_hash == block.previous_hash is false")
             return False
 
         if not Blockchain.is_valid_proof(block, proof):
+            print("not valid proof")
             return False
 
         block.hash = proof
+        print("block.transactions in add_block function = ",block.transactions)
         self.chain.append(block)
         return True
 
     @staticmethod
-    def proof_of_work(block):
-        """
-        Function that tries different values of nonce to get a hash
-        that satisfies our difficulty criteria.
-        """
-        block.nonce = 0
-
-        computed_hash = block.compute_hash()
-        while not computed_hash.startswith('0' * Blockchain.difficulty):
-            block.nonce += 1
-            computed_hash = block.compute_hash()
-
-        return computed_hash
+    def proof_of_authority(block):
+        signer_count = len(authority_nodes)
+        block_number = block.index
+        signer_index = block_number%signer_count
+        block.signer = authority_nodes[signer_index]
+        signer_key = compute_shaHash(str(signer_index))
+        signed_data = block.compute_hash() + str(signer_key)
+        signed_hash = compute_shaHash(signed_data)
+        block.hash = signed_hash
+        #self port hash added to the computed _hash gives the signed hash of the block.
+        return signed_hash
 
     def add_new_transaction(self, transaction):
         self.unconfirmed_transactions.append(transaction)
-        if len(self.unconfirmed_transactions)%self.maxTxnInBlock==0: #mine the block if it contains more than 10 transactions
-            mine_unconfirmed_transactions()
     
     def add_node(self, address):
         parsed_url = urlparse(address)
         self.nodes.add(parsed_url.netloc)
 
-    @classmethod                                                     #has to be commented out 
+    @classmethod
     def is_valid_proof(cls, block, block_hash):
         """
         Check if block_hash is valid hash of block and satisfies
         the difficulty criteria.
         """
-        return (block_hash.startswith('0' * Blockchain.difficulty) and
-                block_hash == block.compute_hash())
+        return ((block_hash == block.compute_hash()+str(private_key))|(block_hash != block.compute_hash()))
 
     @classmethod
     def check_chain_validity(cls, chain):
@@ -168,21 +148,22 @@ class Blockchain:
         """
         This function serves as an interface to add the pending
         transactions to the blockchain by adding them to the block
-        and figuring out Proof Of Work.
+        and figuring out Proof Of Authority.
         """
         if not self.unconfirmed_transactions:
             return False
 
         last_block = self.last_block
-
+        print("self.unconfirmed_transactions = ",self.unconfirmed_transactions)
         new_block = Block(index=last_block.index + 1,
                           transactions=self.unconfirmed_transactions,
                           timestamp=time.ctime(),
                           previous_hash=last_block.hash)
 
-        proof = self.proof_of_work(new_block)
+        proof = self.proof_of_authority(new_block)
+        
         self.add_block(new_block, proof)
-
+        print("new_block.transactions = ",new_block.transactions)
         self.unconfirmed_transactions = []
 
         return True
@@ -247,11 +228,12 @@ def mine_unconfirmed_transactions():
     if not result:
         return "No transactions to mine"
     else:
-        # Making sure we have the longest chain before announcing to the network
         chain_length = len(blockchain.chain)
         consensus()
         if chain_length == len(blockchain.chain):
+            print("chain length is =",chain_length)
             # announce the recently mined block to the network
+            print("blockchain.last_block = ",blockchain.last_block.transactions)
             announce_new_block(blockchain.last_block)
         return "Block #{} is mined.".format(blockchain.last_block.index)
 
@@ -288,14 +270,23 @@ def register_with_existing_node():
     # Make a request to register with remote node and obtain information
     response = requests.post(node_address + "/register_node",
                              data=json.dumps(data), headers=headers)
+    # response_reg_back = requests.post(request.host_url + "/register_node",
+    #                          data=json.dumps(node_address[:-4] + str(port)), headers=headers)
 
     if response.status_code == 200:
         global blockchain
         global peers
+        #global blockchain.unconfirmed
         # update chain and the peers
         chain_dump = response.json()['chain']
         blockchain = create_chain_from_dump(chain_dump)
         peers.update(response.json()['peers'])
+        # if response_reg_back.status_code==200:
+        #     #global blockchain.unconfirmed
+        #     # update chain and the peers
+        #     chain_dump = response_reg_back.json()['chain']
+        #     blockchain = create_chain_from_dump(chain_dump)
+        #     peers.update(response_reg_back.json()['peers'])
         return "Registration successful", 200
     else:
         # if something goes wrong, pass it on to the API response
@@ -312,7 +303,8 @@ def create_chain_from_dump(chain_dump):
                       block_data["transactions"],
                       block_data["timestamp"],
                       block_data["previous_hash"],
-                      block_data["nonce"])
+                      block_data["nonce"],
+                      block_data["signer"])
         proof = block_data['hash']
         added = generated_blockchain.add_block(block, proof)
         if not added:
@@ -330,7 +322,8 @@ def verify_and_add_block():
                   block_data["transactions"],
                   block_data["timestamp"],
                   block_data["previous_hash"],
-                  block_data["nonce"])
+                  block_data["nonce"],
+                  block_data["signer"])
 
     proof = block_data['hash']
     added = blockchain.add_block(block, proof)
@@ -340,11 +333,6 @@ def verify_and_add_block():
 
     return "Block added to the chain", 201
 
-
-@app.route('/getmac')
-#endpoint to get the macaddress of a node
-def getmacadd():
-    return gma()
 
 # endpoint to query unconfirmed transactions
 @app.route('/pending_tx')
@@ -410,44 +398,7 @@ def announce_new_block(block):
 
 
 
-
-
-# # Digital signatures implementation
-
-# # Generate 1024-bit RSA key pair (private + public key)
-# keyPair = RSA.generate(bits=1024)
-# pubKey = keyPair.publickey()
-
-# # Sign the message using the PKCS#1 v1.5 signature scheme (RSASP1)
-# msg = b'Message for RSA signing'
-# hash = SHA256.new(msg)
-# signer = PKCS115_SigScheme(keyPair)
-# signature = signer.sign(hash)
-# print("Signature:", binascii.hexlify(signature))
-
-# # Verify valid PKCS#1 v1.5 signature (RSAVP1)
-# msg = b'Message for RSA signing'
-# hash = SHA256.new(msg)
-# verifier = PKCS115_SigScheme(pubKey)
-# try:
-#     verifier.verify(hash, signature)
-#     print("Signature is valid.")
-# except:
-#     print("Signature is invalid.")
-
-# # Verify invalid PKCS#1 v1.5 signature (RSAVP1)
-# msg = b'A tampered message'
-# hash = SHA256.new(msg)
-# verifier = PKCS115_SigScheme(pubKey)
-# try:
-#     verifier.verify(hash, signature)
-#     print("Signature is valid.")
-# except:
-#     print("Signature is invalid.")
-
-
-
-
+port = 5001
 # Uncomment this line if you want to specify the port number in the code
-app.run(debug=True, port=5002)
-print("app running on port :",5002)
+app.run(debug=True, port=port)
+print("app running on port :",port)
