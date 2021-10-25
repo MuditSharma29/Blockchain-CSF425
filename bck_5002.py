@@ -5,11 +5,13 @@ from uuid import uuid4
 from urllib.parse import urlparse
 from flask import Flask, request, jsonify
 import requests
-from authority_nodes import authority_nodes
+import voting
+import authority_nodes 
 from cryptography.hazmat.primitives import serialization as crypto_serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend as crypto_default_backend
 
+authority_nodes_list = authority_nodes.authority_nodes_list
 
 key = rsa.generate_private_key(
     backend=crypto_default_backend(),
@@ -27,12 +29,11 @@ def compute_shaHash(text):
     return sha256(text.encode()).hexdigest()
 
 class Block:
-    def __init__(self, index, transactions, timestamp, previous_hash, nonce=0,signer=-1):
+    def __init__(self, index, transactions, timestamp, previous_hash,signer=-1):
         self.index = index
         self.transactions = transactions
         self.timestamp = timestamp
         self.previous_hash = previous_hash
-        self.nonce = nonce
         self.signer = signer
 
     def compute_hash(self):
@@ -53,7 +54,6 @@ class Block:
 
 class Blockchain:
     #PoA algorithm implemented
-
     def __init__(self):
         self.unconfirmed_transactions = []
         self.chain = []
@@ -98,16 +98,15 @@ class Blockchain:
 
     @staticmethod
     def proof_of_authority(block):
-        signer_count = len(authority_nodes)
+        signer_count = len(authority_nodes_list)                                    #number of Nodes which are allowed to sign a block
         block_number = block.index
-        signer_index = block_number%signer_count
-        block.signer = authority_nodes[signer_index]
-        signer_key = compute_shaHash(str(signer_index))
+        signer_index = block_number%signer_count                                    #this is the index of the Signer which will sign THIS block
+        block.signer = authority_nodes_list[signer_index]
+        signer_key = compute_shaHash(str(signer_index))                             #hash of the signer
         signed_data = block.compute_hash() + str(signer_key)
-        signed_hash = compute_shaHash(signed_data)
-        block.hash = signed_hash
-        #self port hash added to the computed _hash gives the signed hash of the block.
-        return signed_hash
+        signed_hash = compute_shaHash(signed_data)                                  #self port hash added to the computed _hash gives the signed hash of the block.
+        block.hash = signed_hash                                                    
+        return signed_hash                                                          #returns the signed hash of this block
 
     def add_new_transaction(self, transaction):
         self.unconfirmed_transactions.append(transaction)
@@ -235,7 +234,7 @@ def seal_unconfirmed_transactions():
             # announce the recently seald block to the network
             print("blockchain.last_block = ",blockchain.last_block.transactions)
             announce_new_block(blockchain.last_block)
-        return "Block #{} is seald.".format(blockchain.last_block.index)
+        return "Block #{} is sealed.".format(blockchain.last_block.index)
 
 
 # endpoint to add new peers to the network.
@@ -303,7 +302,6 @@ def create_chain_from_dump(chain_dump):
                       block_data["transactions"],
                       block_data["timestamp"],
                       block_data["previous_hash"],
-                      block_data["nonce"],
                       block_data["signer"])
         proof = block_data['hash']
         added = generated_blockchain.add_block(block, proof)
@@ -322,7 +320,6 @@ def verify_and_add_block():
                   block_data["transactions"],
                   block_data["timestamp"],
                   block_data["previous_hash"],
-                  block_data["nonce"],
                   block_data["signer"])
 
     proof = block_data['hash']
@@ -338,6 +335,10 @@ def verify_and_add_block():
 @app.route('/pending_tx')
 def get_pending_tx():
     return json.dumps(blockchain.unconfirmed_transactions)
+
+@app.route('/voting_authority')
+def voting_authority():
+    return voting.voting_for_authority()
 
 @app.route('/connect_node', methods = ['POST'])
 def connect_node():

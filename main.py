@@ -5,6 +5,7 @@ from uuid import uuid4
 from urllib.parse import urlparse
 from flask import Flask, request, jsonify
 import requests
+import voting
 import authority_nodes 
 from cryptography.hazmat.primitives import serialization as crypto_serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -28,12 +29,11 @@ def compute_shaHash(text):
     return sha256(text.encode()).hexdigest()
 
 class Block:
-    def __init__(self, index, transactions, timestamp, previous_hash, nonce=0,signer=-1):
+    def __init__(self, index, transactions, timestamp, previous_hash,signer=-1):
         self.index = index
         self.transactions = transactions
         self.timestamp = timestamp
         self.previous_hash = previous_hash
-        self.nonce = nonce
         self.signer = signer
 
     def compute_hash(self):
@@ -302,7 +302,6 @@ def create_chain_from_dump(chain_dump):
                       block_data["transactions"],
                       block_data["timestamp"],
                       block_data["previous_hash"],
-                      block_data["nonce"],
                       block_data["signer"])
         proof = block_data['hash']
         added = generated_blockchain.add_block(block, proof)
@@ -321,7 +320,6 @@ def verify_and_add_block():
                   block_data["transactions"],
                   block_data["timestamp"],
                   block_data["previous_hash"],
-                  block_data["nonce"],
                   block_data["signer"])
 
     proof = block_data['hash']
@@ -337,6 +335,10 @@ def verify_and_add_block():
 @app.route('/pending_tx')
 def get_pending_tx():
     return json.dumps(blockchain.unconfirmed_transactions)
+
+@app.route('/voting_authority')
+def voting_authority():
+    return voting.voting_for_authority()
 
 @app.route('/connect_node', methods = ['POST'])
 def connect_node():

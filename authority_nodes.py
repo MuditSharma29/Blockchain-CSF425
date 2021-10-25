@@ -12,7 +12,7 @@ def add_authority(authority_id):
 def remove_authority(authority_id):
     if authority_id in authority_nodes_list:
         authority_nodes_list.remove(authority_id)
-        return "Specified Authority removed successfully"
+        return "{} Authority removed successfully".format(authority_id)
     else:
         return "Authority {} not found".format(authority_id)
 
