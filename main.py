@@ -215,7 +215,8 @@ def get_chain():
         chain_data.append(block.__dict__)
     return json.dumps({"length": len(chain_data),
                        "chain": chain_data,
-                       "peers": list(peers)})
+                       "peers": list(peers),
+                       "authorised nodes":authority_nodes.authority_nodes_list})
 
 
 # endpoint to request the node to seal the unconfirmed
@@ -336,28 +337,14 @@ def verify_and_add_block():
 def get_pending_tx():
     return json.dumps(blockchain.unconfirmed_transactions)
 
-@app.route('/voting_authority')
+@app.route('/voting_authority', methods = ['POST'])
 def voting_authority():
-    return voting.voting_for_authority()
+    json = request.get_json()
+    authority_id_voting = json.get('authority_id_voting')
+    voting_lst = json.get('votes')
+    print(authority_id_voting,voting_lst)
+    return voting.voting_for_authority(authority_id_voting,voting_lst)
 
-@app.route('/connect_node', methods = ['POST'])
-def connect_node():
-    json = requests.get_json()
-    nodes = json.get('nodes')
-    
-    # return none if node feild is null
-    if nodes is None:
-        return 'No node', 400
-    
-    for node in nodes:
-        blockchain.add_node(node)
-
-    # give the response for all the connected nodes and display the nodes
-    response = {'message' : 'All the nodes are now connected.',
-                'total_nodes' : list(blockchain.nodes)}
-    
-    # http 201 - request has succeeded and has led to the creation of a resource
-    return jsonify(response), 201
 
 def consensus():
     """
