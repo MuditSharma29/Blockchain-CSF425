@@ -292,7 +292,6 @@ def register_with_existing_node():
     if response.status_code == 200:
         global blockchain
         global peers
-        #global blockchain.unconfirmed
         # update chain and the peers
         chain_dump = response.json()['chain']
         blockchain = create_chain_from_dump(chain_dump)
@@ -450,5 +449,5 @@ def announce_new_block(block):
 
 
 # Uncomment this line if you want to specify the port number in the code
-app.run(debug=True, port=8000)
-print("app running on port :",8000)
+app.run(debug=True, port=5001)
+print("app running on port :",5001)
